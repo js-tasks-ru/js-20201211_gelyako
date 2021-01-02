@@ -9,6 +9,7 @@ export default class SortableTable {
     this.data = data;
 
     this.render();
+    this.initEventListeners();
   }
 
   getTableHeader() {
@@ -81,6 +82,17 @@ export default class SortableTable {
 
     this.element = element;
     this.subElements = this.getSubElements(element);
+  }
+
+  initEventListeners() {
+    this.subElements.header.addEventListener('pointerdown', (evt) => {
+      const columnHeader = evt.target.closest('.sortable-table__cell');
+      if (columnHeader && columnHeader.dataset.sortable === "true") {
+        // if this column wasn't sorted (order = undefined), then 'desc'
+        const order = columnHeader.dataset.order === 'desc' ? 'asc' : 'desc';
+        this.sort(columnHeader.dataset.id, order);
+      }
+    });
   }
 
   sort(field, order) {
