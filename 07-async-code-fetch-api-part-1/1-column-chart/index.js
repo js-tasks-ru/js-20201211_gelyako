@@ -1,19 +1,32 @@
+import fetchJson from './utils/fetch-json.js';
+
+const BACKEND_URL = 'https://course-js.javascript.ru';
+
 export default class ColumnChart {
   subElements = {};
   chartHeight = 50;
 
   constructor({
-                data = [],
+                url,
+                range: {
+                  from = new Date(),
+                  to = new Date(),
+                } = {},
                 label = '',
                 link = '',
-                value = 0
+                value = 0,
               } = {}) {
-    this.data = data;
+    this.url = new URL(url, BACKEND_URL);
+    this.range = {
+      from,
+      to
+    };
     this.label = label;
     this.link = link;
     this.value = value;
 
     this.render();
+    this.update(this.range.from, this.range.to);
   }
 
   getColumnBody(data) {
@@ -42,10 +55,8 @@ export default class ColumnChart {
         </div>
         <div class="column-chart__container">
            <div data-element="header" class="column-chart__header">
-             ${this.value}
            </div>
           <div data-element="body" class="column-chart__chart">
-            ${this.getColumnBody(this.data)}
           </div>
         </div>
       </div>
@@ -54,14 +65,8 @@ export default class ColumnChart {
 
   render() {
     const element = document.createElement('div');
-
     element.innerHTML = this.template;
-
     this.element = element.firstElementChild;
-
-    if (this.data.length) {
-      this.element.classList.remove('column-chart_loading');
-    }
 
     this.subElements = this.getSubElements(this.element);
   }
@@ -76,17 +81,35 @@ export default class ColumnChart {
     }, {});
   }
 
-  update(data) {
-    this.subElements.body.innerHTML = this.getColumnBody(data);
+  async update(startDate, endDate) {
+    this.range.from = startDate;
+    this.range.to = endDate;
+    this.url.searchParams.set('from', this.range.from.toISOString());
+    this.url.searchParams.set('to', this.range.to.toISOString());
+
+    this.element.classList.add('column-chart_loading');
+    const json = await fetchJson(this.url);
+    this.data = Object.values(json);
+    this.value = this.data.reduce((sum, value) => sum += value, 0);
+
+    this._redraw();
   }
 
-  remove () {
+  _redraw() {
+    if (this.data.length) {
+      this.element.classList.remove('column-chart_loading');
+
+      this.subElements.header.textContent = this.value;
+      this.subElements.body.innerHTML = this.getColumnBody(this.data);
+    }
+  }
+
+  remove() {
     this.element.remove();
   }
 
   destroy() {
     this.remove();
-    this.element = null;
     this.subElements = {};
   }
 }
