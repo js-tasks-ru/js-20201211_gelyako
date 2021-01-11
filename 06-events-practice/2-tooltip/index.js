@@ -25,7 +25,7 @@ class Tooltip {
   }
 
   showOnPointerOver = (evt) => {
-    if (evt.target.matches('[data-tooltip]')) {
+    if (evt.target.closest('[data-tooltip]')) {
       this.render(evt.target.dataset.tooltip);
 
       document.addEventListener("pointermove", this.moveOnPointerMove);
