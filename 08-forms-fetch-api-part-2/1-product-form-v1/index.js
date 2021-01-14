@@ -184,8 +184,8 @@ export default class ProductForm {
     const {title, description, subcategory, price, quantity, discount, status} = this.subElements.productForm.elements;
     const formData = {
       id: this.productId,
-      title: escapeHtml(title.value),
-      description: escapeHtml(description.value),
+      title: title.value,
+      description: description.value,
       subcategory: subcategory.value,
       price: parseInt(price.value, 10),
       quantity: parseInt(quantity.value, 10),
@@ -196,7 +196,7 @@ export default class ProductForm {
     formData.images = [...this.subElements.imageListContainer.firstElementChild.querySelectorAll('.products-edit__imagelist-item')]
       .map(elt => {
         const url = elt.querySelector('input[name="url"]').value;
-        const source = elt.querySelector('input[name="url"]').value;
+        const source = elt.querySelector('input[name="source"]').value;
         return {url, source};
       });
 
