@@ -7,6 +7,16 @@ const BACKEND_URL = 'https://course-js.javascript.ru';
 export default class ProductForm {
 
   subElements = {};
+  defaultFormData = {
+    title: '',
+    description: '',
+    quantity: 1,
+    subcategory: '',
+    status: 1,
+    images: [],
+    price: 100,
+    discount: 0
+  };
 
   constructor(productId) {
     this.productId = productId;
@@ -24,24 +34,30 @@ export default class ProductForm {
       const productUrl = new URL('api/rest/products', BACKEND_URL);
       productUrl.searchParams.set('id', this.productId);
       const products = await fetchJson(productUrl);
-      this.product = products[0];
+      this.formData = products[0];
+    } else {
+      this.formData = this.defaultFormData;
     }
-    if (this.product) {
-      const {title, description, price, discount, quantity, status, images} = this.product;
-      this.subElements.productForm.elements.title.value = title;
-      this.subElements.productForm.elements.description.value = description;
-      this.subElements.productForm.elements.price.value = price;
-      this.subElements.productForm.elements.discount.value = discount;
-      this.subElements.productForm.elements.quantity.value = quantity;
-      this.subElements.productForm.elements.status.value = status;
+  }
 
-      const imageElements = images.map(({url, source}) => this.getUploadedImageTemplate({url, source}));
+  setFormData () {
+    const { productForm } = this.subElements;
+    const excludedFields = ['images'];
+    const fields = Object.keys(this.defaultFormData).filter(item => !excludedFields.includes(item));
+
+    fields.forEach(item => {
+      const element = productForm.querySelector(`#${item}`);
+      element.value = this.formData[item] || this.defaultFormData[item];
+    });
+
+    if (this.formData['images']) {
+      const imageElements = this.formData['images'].map(({url, source}) => this.getUploadedImageTemplate({url, source}));
       this.subElements.imageListContainer.firstElementChild.innerHTML = imageElements.join('');
     }
   }
 
   async render() {
-    await this.getCategories();
+    await Promise.all([this.getCategories(), this.loadData()]);
 
     const element = document.createElement('div');
     element.innerHTML = this.template();
@@ -51,7 +67,7 @@ export default class ProductForm {
     elements.forEach(elt => this.subElements[elt.dataset.element] = elt);
 
     this.subElements.productForm.elements.subcategory.append(...this.getSubCategories());
-    await this.loadData();
+    this.setFormData();
     this.addEventListeners();
 
     return this.element;
@@ -73,26 +89,33 @@ export default class ProductForm {
 
     imageInput.onchange = async () => {
 
-      let uploader = new ImageUploader();
       let result;
 
+      const [file] = imageInput.files;
+
+      const formData = new FormData();
+      formData.append('image', file);
       try {
-        const [file] = imageInput.files;
-        result = await uploader.upload(file);
-
-        this.subElements.imageListContainer.firstElementChild.insertAdjacentHTML('beforeend',
-          this.getUploadedImageTemplate({
-            url: result.data.link,
-            source: file.name
-          }));
-
+        result = await fetchJson('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${IMGUR_CLIENT_ID}`
+          },
+          body: formData,
+        });
       } catch (err) {
-        console.error(err);
+        throw err;
       } finally {
         imageInput.remove();
       }
-    };
 
+      this.subElements.imageListContainer.firstElementChild.insertAdjacentHTML('beforeend',
+        this.getUploadedImageTemplate({
+          url: result.data.link,
+          source: file.name
+        }));
+    };
+    imageInput.hidden = true;
     document.body.appendChild(imageInput);
     imageInput.click();
   }
@@ -218,23 +241,5 @@ export default class ProductForm {
 
   destroy() {
     this.remove();
-  }
-}
-
-class ImageUploader {
-  async upload(file) {
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-      return await fetchJson('https://api.imgur.com/3/image', {
-        method: 'POST',
-        headers: {
-          Authorization: `Client-ID ${IMGUR_CLIENT_ID}`
-        },
-        body: formData,
-      });
-    } catch (err) {
-      throw err;
-    }
   }
 }
