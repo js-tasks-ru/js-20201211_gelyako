@@ -52,7 +52,7 @@ export default class ProductForm {
           body: formData
         });
 
-        imageListContainer.append(this.getImageItem(result.data.link, file.name));
+        this.sortableImageList.addItem(this.getImageItem(result.data.link, file.name));
 
         uploadImage.classList.remove('is-loading');
         uploadImage.disabled = false;
@@ -100,9 +100,8 @@ export default class ProductForm {
         </div>
         <div class="form-group form-group__wide" data-element="sortable-list-container">
           <label class="form-label">Фото</label>
-          <ul class="sortable-list" data-element="imageListContainer">
-            ${this.createImagesList()}
-          </ul>
+          <div data-element="imageListContainer">
+          </div>
           <button data-element="uploadImage" type="button" class="button-primary-outline">
             <span>Загрузить</span>
           </button>
@@ -192,6 +191,9 @@ export default class ProductForm {
 
     this.element = element.firstElementChild;
     this.subElements = this.getSubElements(element);
+
+    this.createImagesList();
+    this.subElements.imageListContainer.append(this.sortableImageList.element);
   }
 
   getEmptyTemplate () {
@@ -303,16 +305,17 @@ export default class ProductForm {
   }
 
   createImagesList () {
-    return this.formData.images.map(item => {
-      return this.getImageItem(item.url, item.source).outerHTML;
-    }).join('');
+    const items = this.formData.images.map(item => {
+      return this.getImageItem(item.url, item.source);
+    });
+    this.sortableImageList = new SortableList({items});
   }
 
   getImageItem (url, name) {
     const wrapper = document.createElement('div');
 
     wrapper.innerHTML = `
-      <li class="products-edit__imagelist-item sortable-list__item">
+      <li class="products-edit__imagelist-item">
         <span>
           <img src="./icon-grab.svg" data-grab-handle alt="grab">
           <img class="sortable-table__cell-img" alt="${escapeHtml(name)}" src="${escapeHtml(url)}">
@@ -331,15 +334,6 @@ export default class ProductForm {
 
     productForm.addEventListener('submit', this.onSubmit);
     uploadImage.addEventListener('click', this.uploadImage);
-
-    /* TODO: will be removed in the next iteration of realization.
-       this logic will be implemented inside "SortableList" component
-    */
-    imageListContainer.addEventListener('click', event => {
-      if ('deleteHandle' in event.target.dataset) {
-        event.target.closest('li').remove();
-      }
-    });
   }
 
   destroy () {
@@ -349,6 +343,7 @@ export default class ProductForm {
   }
 
   remove () {
+    this.sortableImageList.destroy();
     this.element.remove();
   }
 }
